@@ -8,7 +8,7 @@ import seaborn as sns
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.svm import SVC
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, confusion_matrix
 from sklearn.impute import SimpleImputer
 
 # ---------------------------------
@@ -73,11 +73,9 @@ X = df.drop(['Loan_Status', 'Loan_ID'], axis=1)
 y = df['Loan_Status']
 
 # Encode categorical features
-label_encoders = {}
 for col in X.select_dtypes(include='object').columns:
     le = LabelEncoder()
     X[col] = le.fit_transform(X[col])
-    label_encoders[col] = le
 
 # Encode target
 le_y = LabelEncoder()
@@ -108,9 +106,13 @@ svm_linear.fit(X_train, y_train)
 svm_poly.fit(X_train, y_train)
 svm_rbf.fit(X_train, y_train)
 
-acc_linear = accuracy_score(y_test, svm_linear.predict(X_test))
-acc_poly = accuracy_score(y_test, svm_poly.predict(X_test))
-acc_rbf = accuracy_score(y_test, svm_rbf.predict(X_test))
+y_pred_linear = svm_linear.predict(X_test)
+y_pred_poly = svm_poly.predict(X_test)
+y_pred_rbf = svm_rbf.predict(X_test)
+
+acc_linear = accuracy_score(y_test, y_pred_linear)
+acc_poly = accuracy_score(y_test, y_pred_poly)
+acc_rbf = accuracy_score(y_test, y_pred_rbf)
 
 # ---------------------------------
 # Accuracy Display
@@ -154,5 +156,34 @@ ax.set_title("SVM Kernel Accuracy Comparison")
 
 for i, v in enumerate(accuracies.values()):
     ax.text(i, v + 0.02, f"{v:.3f}", ha="center")
+
+st.pyplot(fig)
+
+# ---------------------------------
+# Confusion Matrix Heatmaps
+# ---------------------------------
+st.subheader("🔥 Confusion Matrix Heatmaps")
+
+cm_linear = confusion_matrix(y_test, y_pred_linear)
+cm_poly = confusion_matrix(y_test, y_pred_poly)
+cm_rbf = confusion_matrix(y_test, y_pred_rbf)
+
+fig, axes = plt.subplots(1, 3, figsize=(18, 5))
+
+sns.heatmap(cm_linear, annot=True, fmt="d", cmap="Blues",
+            xticklabels=["No", "Yes"], yticklabels=["No", "Yes"], ax=axes[0])
+axes[0].set_title("Linear Kernel")
+
+sns.heatmap(cm_poly, annot=True, fmt="d", cmap="Greens",
+            xticklabels=["No", "Yes"], yticklabels=["No", "Yes"], ax=axes[1])
+axes[1].set_title("Polynomial Kernel")
+
+sns.heatmap(cm_rbf, annot=True, fmt="d", cmap="Oranges",
+            xticklabels=["No", "Yes"], yticklabels=["No", "Yes"], ax=axes[2])
+axes[2].set_title("RBF Kernel")
+
+for ax in axes:
+    ax.set_xlabel("Predicted")
+    ax.set_ylabel("Actual")
 
 st.pyplot(fig)
