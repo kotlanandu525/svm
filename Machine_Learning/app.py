@@ -36,9 +36,8 @@ def load_css(file_name):
 load_css("style.css")
 
 # ---------------------------------
-# Load Dataset
+# Dataset Loader (NO widgets in cache)
 # ---------------------------------
-
 st.subheader("📂 Dataset Loader")
 
 uploaded_file = st.file_uploader(
@@ -47,25 +46,23 @@ uploaded_file = st.file_uploader(
 )
 
 @st.cache_data
-def load_data_from_file(file):
+def load_data(file):
     return pd.read_csv(file)
 
 if uploaded_file is not None:
-    df = load_data_from_file(uploaded_file)
+    df = load_data(uploaded_file)
+    st.success("Dataset loaded from uploaded file")
 elif os.path.exists("train_u6lujuX_CVtuZ9i.csv"):
     df = pd.read_csv("train_u6lujuX_CVtuZ9i.csv")
+    st.success("Dataset loaded from local file")
 else:
     st.warning("Please upload the Loan dataset CSV file to continue.")
     st.stop()
-
-
-df = load_data()
 
 # ---------------------------------
 # Dataset Preview
 # ---------------------------------
 if st.checkbox("Show Dataset"):
-    st.subheader("Dataset Preview")
     st.dataframe(df.head())
 
 # ---------------------------------
@@ -204,5 +201,3 @@ for ax in axes:
     ax.set_ylabel("Actual")
 
 st.pyplot(fig)
-
-
