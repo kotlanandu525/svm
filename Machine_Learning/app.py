@@ -40,7 +40,22 @@ load_css("style.css")
 # ---------------------------------
 @st.cache_data
 def load_data():
-    return pd.read_csv("train_u6lujuX_CVtuZ9i.csv")
+    file_path = "train_u6lujuX_CVtuZ9i.csv"
+
+    # Case 1: File exists in repo (GitHub / local)
+    if os.path.exists(file_path):
+        return pd.read_csv(file_path)
+
+    # Case 2: Upload manually (Streamlit Cloud safe)
+    uploaded_file = st.file_uploader(
+        "Upload Loan Dataset CSV",
+        type=["csv"]
+    )
+
+    if uploaded_file is not None:
+        return pd.read_csv(uploaded_file)
+
+    st.stop()
 
 df = load_data()
 
@@ -187,3 +202,4 @@ for ax in axes:
     ax.set_ylabel("Actual")
 
 st.pyplot(fig)
+
