@@ -138,18 +138,6 @@ st.markdown(
 # ---------------------------------
 # Accuracy Plot
 # ---------------------------------
-st.subheader("📈 Accuracy Comparison")
-fig, ax = plt.subplots(figsize=(10, 6))
-sns.barplot(
-    x=["Linear", "Polynomial", "RBF"],
-    y=[acc_linear, acc_poly, acc_rbf],
-    palette="viridis",
-    ax=ax
-)
-ax.set_ylim(0, 1)
-for i, v in enumerate([acc_linear, acc_poly, acc_rbf]):
-    ax.text(i, v + 0.02, f"{v:.3f}", ha="center")
-st.pyplot(fig)
 
 # ---------------------------------
 # Confusion Matrix Heatmaps
@@ -236,3 +224,4 @@ if st.button("Predict Loan Status"):
         """,
         unsafe_allow_html=True
     )
+
