@@ -36,7 +36,7 @@ def load_css(file_name):
 load_css("style.css")
 
 # ---------------------------------
-# Dataset Loader (NO widgets in cache)
+# Dataset Loader
 # ---------------------------------
 st.subheader("📂 Dataset Loader")
 
@@ -66,48 +66,39 @@ if st.checkbox("Show Dataset"):
     st.dataframe(df.head())
 
 # ---------------------------------
-# Column Identification
+# Preprocessing
 # ---------------------------------
 cat_cols = df.select_dtypes(include='object').columns
 num_cols = df.select_dtypes(include=['int64', 'float64']).columns
 
-# ---------------------------------
-# Handle Missing Values
-# ---------------------------------
 num_imputer = SimpleImputer(strategy='median')
 df[num_cols] = num_imputer.fit_transform(df[num_cols])
 
 cat_imputer = SimpleImputer(strategy='most_frequent')
 df[cat_cols] = cat_imputer.fit_transform(df[cat_cols])
 
-# ---------------------------------
-# Feature / Target Split
-# ---------------------------------
 X = df.drop(['Loan_Status', 'Loan_ID'], axis=1)
 y = df['Loan_Status']
 
-# Encode categorical features
+label_encoders = {}
 for col in X.select_dtypes(include='object').columns:
     le = LabelEncoder()
     X[col] = le.fit_transform(X[col])
+    label_encoders[col] = le
 
-# Encode target
 le_y = LabelEncoder()
 y = le_y.fit_transform(y)
 
 # ---------------------------------
-# Train-Test Split
+# Train-Test Split & Scaling
 # ---------------------------------
 X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=0.3, random_state=42
 )
 
-# ---------------------------------
-# Scaling
-# ---------------------------------
 scaler = StandardScaler()
-X_train = scaler.fit_transform(X_train)
-X_test = scaler.transform(X_test)
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
 
 # ---------------------------------
 # Train Models
@@ -116,13 +107,14 @@ svm_linear = SVC(kernel='linear', C=1)
 svm_poly = SVC(kernel='poly', degree=3, C=1)
 svm_rbf = SVC(kernel='rbf', C=1, gamma='scale')
 
-svm_linear.fit(X_train, y_train)
-svm_poly.fit(X_train, y_train)
-svm_rbf.fit(X_train, y_train)
+svm_linear.fit(X_train_scaled, y_train)
+svm_poly.fit(X_train_scaled, y_train)
+svm_rbf.fit(X_train_scaled, y_train)
 
-y_pred_linear = svm_linear.predict(X_test)
-y_pred_poly = svm_poly.predict(X_test)
-y_pred_rbf = svm_rbf.predict(X_test)
+# Predictions
+y_pred_linear = svm_linear.predict(X_test_scaled)
+y_pred_poly = svm_poly.predict(X_test_scaled)
+y_pred_rbf = svm_rbf.predict(X_test_scaled)
 
 acc_linear = accuracy_score(y_test, y_pred_linear)
 acc_poly = accuracy_score(y_test, y_pred_poly)
@@ -132,68 +124,49 @@ acc_rbf = accuracy_score(y_test, y_pred_rbf)
 # Accuracy Display
 # ---------------------------------
 st.subheader("📊 Model Accuracy")
-
 st.markdown(
     f"""
     <div style='text-align:center; background-color:#E8F8F5; padding:20px; border-radius:15px;'>
-        <h3>Linear Kernel Accuracy: {acc_linear:.3f}</h3>
-        <h3>Polynomial Kernel Accuracy: {acc_poly:.3f}</h3>
-        <h3>RBF Kernel Accuracy: {acc_rbf:.3f}</h3>
+        <h3>Linear Kernel: {acc_linear:.3f}</h3>
+        <h3>Polynomial Kernel: {acc_poly:.3f}</h3>
+        <h3>RBF Kernel: {acc_rbf:.3f}</h3>
     </div>
     """,
     unsafe_allow_html=True
 )
 
 # ---------------------------------
-# Accuracy Comparison Plot
+# Accuracy Plot
 # ---------------------------------
 st.subheader("📈 Accuracy Comparison")
-
-accuracies = {
-    "Linear Kernel": acc_linear,
-    "Polynomial Kernel": acc_poly,
-    "RBF Kernel": acc_rbf
-}
-
 fig, ax = plt.subplots(figsize=(10, 6))
 sns.barplot(
-    x=list(accuracies.keys()),
-    y=list(accuracies.values()),
+    x=["Linear", "Polynomial", "RBF"],
+    y=[acc_linear, acc_poly, acc_rbf],
     palette="viridis",
     ax=ax
 )
-
 ax.set_ylim(0, 1)
-ax.set_xlabel("Kernel Type")
-ax.set_ylabel("Accuracy")
-ax.set_title("SVM Kernel Accuracy Comparison")
-
-for i, v in enumerate(accuracies.values()):
+for i, v in enumerate([acc_linear, acc_poly, acc_rbf]):
     ax.text(i, v + 0.02, f"{v:.3f}", ha="center")
-
 st.pyplot(fig)
 
 # ---------------------------------
 # Confusion Matrix Heatmaps
 # ---------------------------------
 st.subheader("🔥 Confusion Matrix Heatmaps")
-
-cm_linear = confusion_matrix(y_test, y_pred_linear)
-cm_poly = confusion_matrix(y_test, y_pred_poly)
-cm_rbf = confusion_matrix(y_test, y_pred_rbf)
-
 fig, axes = plt.subplots(1, 3, figsize=(18, 5))
 
-sns.heatmap(cm_linear, annot=True, fmt="d", cmap="Blues",
-            xticklabels=["No", "Yes"], yticklabels=["No", "Yes"], ax=axes[0])
+sns.heatmap(confusion_matrix(y_test, y_pred_linear),
+            annot=True, fmt="d", cmap="Blues", ax=axes[0])
 axes[0].set_title("Linear Kernel")
 
-sns.heatmap(cm_poly, annot=True, fmt="d", cmap="Greens",
-            xticklabels=["No", "Yes"], yticklabels=["No", "Yes"], ax=axes[1])
+sns.heatmap(confusion_matrix(y_test, y_pred_poly),
+            annot=True, fmt="d", cmap="Greens", ax=axes[1])
 axes[1].set_title("Polynomial Kernel")
 
-sns.heatmap(cm_rbf, annot=True, fmt="d", cmap="Oranges",
-            xticklabels=["No", "Yes"], yticklabels=["No", "Yes"], ax=axes[2])
+sns.heatmap(confusion_matrix(y_test, y_pred_rbf),
+            annot=True, fmt="d", cmap="Oranges", ax=axes[2])
 axes[2].set_title("RBF Kernel")
 
 for ax in axes:
@@ -201,3 +174,65 @@ for ax in axes:
     ax.set_ylabel("Actual")
 
 st.pyplot(fig)
+
+# ---------------------------------
+# 🔮 Loan Status Prediction (Minimal Inputs)
+# ---------------------------------
+st.subheader("🔮 Predict Loan Status (Minimal Inputs)")
+
+kernel_choice = st.selectbox(
+    "Choose SVM Kernel",
+    ["Linear", "Polynomial", "RBF"]
+)
+
+gender = st.selectbox("Gender", ["Male", "Female"])
+married = st.selectbox("Married", ["Yes", "No"])
+education = st.selectbox("Education", ["Graduate", "Not Graduate"])
+app_income = st.number_input("Applicant Income", 0, 100000, 5000)
+loan_amount = st.number_input("Loan Amount", 0, 1000, 150)
+credit_history = st.selectbox("Credit History", [1.0, 0.0])
+
+input_data = {
+    "Gender": gender,
+    "Married": married,
+    "Education": education,
+    "ApplicantIncome": app_income,
+    "LoanAmount": loan_amount,
+    "Credit_History": credit_history
+}
+
+input_df = pd.DataFrame([input_data])
+
+# Encode categorical inputs
+for col, le in label_encoders.items():
+    if col in input_df.columns:
+        input_df[col] = le.transform(input_df[col])
+
+# 🔥 Align features
+input_df = input_df.reindex(columns=X.columns, fill_value=0)
+
+# 🔥 Scale FULL feature matrix
+input_df = pd.DataFrame(
+    scaler.transform(input_df),
+    columns=X.columns
+)
+
+model_map = {
+    "Linear": svm_linear,
+    "Polynomial": svm_poly,
+    "RBF": svm_rbf
+}
+
+if st.button("Predict Loan Status"):
+    prediction = model_map[kernel_choice].predict(input_df)[0]
+    result = "✅ Loan Approved" if prediction == 1 else "❌ Loan Rejected"
+
+    st.markdown(
+        f"""
+        <div style="text-align:center; background-color:#FDEBD0;
+        padding:25px; border-radius:15px;">
+            <h2>{result}</h2>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
